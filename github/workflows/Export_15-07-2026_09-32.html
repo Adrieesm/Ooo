@@ -1,0 +1,399 @@
+١٥‏/٧‏/٢٠٢٦   ٩:٣٢ ص
+
+package com.example
+
+import android.os.Bundle
+impo
+
+package com.example
+
+import android.os.Bundle
+import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.data.SavedSnippet
+import com.example.ui.ChatMessage
+import com.example.ui.GameDevViewModel
+import com.example.ui.components.CodePlayground
+import com.example.ui.theme.MyApplicationTheme
+import kotlinx.coroutines.launch
+
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+
+        // استدعاء الـ ViewModel المسؤول عن المنطق والربط بالذكاء الاصطناعي وقاعدة البيانات
+        val viewModel = ViewModelProvider(this)[GameDevViewModel::class.java]
+
+        setContent {
+            MyApplicationTheme {
+                Scaffold(
+                    modifier = Modifier.fillMaxSize(),
+                    contentWindowInsets = WindowInsets.safeDrawing
+                ) { innerPadding ->
+                    MainGameDevApp(
+                        viewModel = viewModel,
+                        modifier = Modifier.padding(innerPadding)
+                    )
+                }
+            }
+        }
+    }
+}
+
+data class TutorialItem(
+    val title: String,
+    val description: String,
+    val engine: String,
+    val language: String,
+    val code: String,
+    val explanation: String
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MainGameDevApp(
+    viewModel: GameDevViewModel,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    var selectedTab by remember { mutableStateOf(0) } // 0: الرئيسية, 1: الدلائل, 2: مساعد الذكاء, 3: مكتبتي
+
+    val savedSnippets by viewModel.savedSnippets.collectAsStateWithLifecycle()
+    val snippetsCount by viewModel.snippetsCount.collectAsStateWithLifecycle()
+    val chatHistory by viewModel.chatHistory.collectAsStateWithLifecycle()
+    val isChatLoading by viewModel.isChatLoading.collectAsStateWithLifecycle()
+
+    var showAddSnippetDialog by remember { mutableStateOf(false) }
+
+    // الدروس والدلائل التعليمية المحملة مسبقاً في البوابة
+    val tutorials = remember {
+        listOf(
+            TutorialItem(
+                title = "تحريك اللاعب ثنائي الأبعاد (2D Movement)",
+                description = "حركة كلاسيكية للاعب باستخدام المحاور في Unity و Godot.",
+                engine = "Unity",
+                language = "C#",
+                code = """
+using UnityEngine;
+
+public class PlayerController : MonoBehaviour
+{
+    public float speed = 5.0f;
+    private Rigidbody2D rb;
+    private Vector2 moveInput;
+
+    void Start()
+    {
+        rb = GetComponent<Rigidbody2D>();
+    }
+
+    void Update()
+    {
+        float moveX = Input.GetAxisRaw("Horizontal");
+        float moveY = Input.GetAxisRaw("Vertical");
+        moveInput = new Vector2(moveX, moveY).normalized;
+    }
+
+    void FixedUpdate()
+    {
+        rb.linearVelocity = moveInput * speed;
+    }
+}
+                """.trimIndent(),
+                explanation = "يقوم هذا الكود بالتقاط مدخلات المستخدم في دالة Update، ثم يطبق الحركة الفيزيائية داخل دالة FixedUpdate لضمان ثبات الحركة على مختلف الأجهزة وشاشات العرض."
+            ),
+            TutorialItem(
+                title = "تحريك اللاعب الفيزيائي في Godot",
+                description = "استخدام CharacterBody2D للحركة والاصطدام في محرك Godot 4.",
+                engine = "Godot",
+                language = "GDScript",
+                code = """
+extends CharacterBody2D
+
+@export var speed: float = 300.0
+
+func _physics_process(delta: float) -> void:
+	var direction := Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
+	if direction != Vector2.ZERO:
+		velocity = direction * speed
+	else:
+		velocity = velocity.move_toward(Vector2.ZERO, speed)
+	move_and_slide()
+                """.trimIndent(),
+                explanation = "في محرك Godot 4، تعتبر دالة move_and_slide() الأقوى للتحريك الفيزيائي للشخصيات حيث تقوم بحساب انزلاقها التلقائي عند ملامسة الجدران."
+            ),
+            TutorialItem(
+                title = "إطلاق المقذوفات ثلاثي الأبعاد (3D Shooting)",
+                description = "إنشاء وتوجيه المقذوفات للأمام بقوة فيزيائية.",
+                engine = "Unity",
+                language = "C#",
+                code = """
+using UnityEngine;
+
+public class Shooter : MonoBehaviour
+{
+    public GameObject projectilePrefab;
+    public Transform spawnPoint;
+    public float launchForce = 20f;
+
+    void Update()
+    {
+        if (Input.GetButtonDown("Fire1"))
+        {
+            Shoot();
+        }
+    }
+
+    void Shoot()
+    {
+        GameObject bullet = Instantiate(projectilePrefab, spawnPoint.position, spawnPoint.rotation);
+        Rigidbody rb = bullet.GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            rb.AddForce(spawnPoint.forward * launchForce, ForceMode.Impulse);
+        }
+        Destroy(bullet, 3.0f); // توفير الذاكرة
+    }
+}
+                """.trimIndent(),
+                explanation = "يقوم الكود باستدعاء Instantiate لإنشاء نسخة برمجية جديدة من الرصاصة، ثم يستخدم دالة AddForce بنمط Impulse لإطلاقها وتدميرها بعد 3 ثوان لتوفير الذاكرة."
+            )
+        )
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color(0xFF0C0D12))
+    ) {
+        // لوحة خلفية جمالية متوهجة (Ambient Glowing)
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(Color(0x1F00F0FF), Color.Transparent),
+                    center = Offset(size.width * 0.8f, size.height * 0.2f),
+                    radius = size.width * 0.6f
+                ),
+                radius = size.width * 0.6f,
+                center = Offset(size.width * 0.8f, size.height * 0.2f)
+            )
+        }
+
+        Column(modifier = Modifier.fillMaxSize()) {
+            // شريط العنوان العلوي (Top Header)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        text = "بوابة مطوري الألعاب",
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        style = TextStyle(
+                            shadow = Shadow(
+                                color = Color(0xFF00F0FF),
+                                offset = Offset(0f, 0f),
+                                blurRadius = 10f
+                            )
+                        )
+                    )
+                    Text(
+                        text = "GameDev Professional Hub",
+                        color = Color(0xFF8F9BB3),
+                        fontSize = 11.sp
+                    )
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(30.dp))
+                        .background(Color(0x1200F0FF))
+                        .border(1.dp, Color(0x3300F0FF), RoundedCornerShape(30.dp))
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF00F0FF))
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "متصل بالذكاء الاصطناعي",
+                        color = Color(0xFF00F0FF),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            // خط تقسيم ملون متوهج
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(
+                        Brush.horizontalGradient(
+                            colors = listOf(Color.Transparent, Color(0xFF00F0FF), Color(0xFFFF6600), Color.Transparent)
+                        )
+                    )
+            )
+
+            // عرض الصفحة الحالية بناءً على التبويب المختار
+            Box(
+                modifier = Modifier
+                    .weight(1.0f)
+                    .fillMaxWidth()
+            ) {
+                when (selectedTab) {
+                    0 -> TabDashboard(
+                        snippetsCount = snippetsCount,
+                        onTabSelect = { selectedTab = it },
+                        tutorials = tutorials,
+                        onSaveSnippet = { item ->
+                            viewModel.saveSnippet(item.title, item.engine, item.language, item.code, item.explanation)
+                            Toast.makeText(context, "تم الحفظ بنجاح! 💾", Toast.LENGTH_SHORT).show()
+                        }
+                    )
+                    1 -> TabGuides(
+                        tutorials = tutorials,
+                        onSaveSnippet = { item ->
+                            viewModel.saveSnippet(item.title, item.engine, item.language, item.code, item.explanation)
+                            Toast.makeText(context, "تم الحفظ بنجاح! 💾", Toast.LENGTH_SHORT).show()
+                        }
+                    )
+                    2 -> TabAiAssistant(
+                        chatHistory = chatHistory,
+                        isLoading = isChatLoading,
+                        onSendMessage = { viewModel.sendChatMessage(it) },
+                        onClearChat = { viewModel.clearChat() }
+                    )
+                    3 -> TabLibrary(
+                        savedSnippets = savedSnippets,
+                        onDeleteSnippet = { id -> viewModel.deleteSnippet(id) },
+                        onAddCustomSnippetClick = { showAddSnippetDialog = true }
+                    )
+                }
+            }
+
+            // شريط التنقل السفلي المطور (Bottom Navigation Bar)
+            NavigationBar(
+                containerColor = Color(0xFF10121A),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                NavigationBarItem(
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 },
+                    icon = { Icon(Icons.Filled.Dashboard, contentDescription = "الرئيسية") },
+                    label = { Text("الرئيسية", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = Color(0xFF00F0FF),
+                        selectedTextColor = Color(0xFF00F0FF),
+                        unselectedIconColor = Color(0xFF8F9BB3),
+                        unselectedTextColor = Color(0xFF8F9BB3),
+                        indicatorColor = Color(0x1F00F0FF)
+                    )
+                )
+
+                NavigationBarItem(
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 },
+                    icon = { Icon(Icons.Filled.Book, contentDescription = "الدلائل") },
+                    label = { Text("الدلائل", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = Color(0xFF00F0FF),
+                        selectedTextColor = Color(0xFF00F0FF),
+                        unselectedIconColor = Color(0xFF8F9BB3),
+                        unselectedTextColor = Color(0xFF8F9BB3),
+                        indicatorColor = Color(0x1F00F0FF)
+                    )
+                )
+
+                NavigationBarItem(
+                    selected = selectedTab == 2,
+                    onClick = { selectedTab = 2 },
+                    icon = { Icon(Icons.Filled.Psychology, contentDescription = "مساعد الذكاء") },
+                    label = { Text("مساعد الذكاء", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = Color(0xFF00F0FF),
+                        selectedTextColor = Color(0xFF00F0FF),
+                        unselectedIconColor = Color(0xFF8F9BB3),
+                        unselectedTextColor = Color(0xFF8F9BB3),
+                        indicatorColor = Color(0x1F00F0FF)
+                    )
+                )
+
+                NavigationBarItem(
+                    selected = selectedTab == 3,
+                    onClick = { selectedTab = 3 },
+                    icon = { Icon(Icons.Filled.FolderSpecial, contentDescription = "مكتبتي") },
+                    label = { Text("مكتبتي", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = Color(0xFF00F0FF),
+                        selectedTextColor = Color(0xFF00F0FF),
+                        unselectedIconColor = Color(0xFF8F9BB3),
+                        unselectedTextColor = Color(0xFF8F9BB3),
+                        indicatorColor = Color(0x1F00F0FF)
+                    )
+                )
+            }
+        }
+    }
+}
